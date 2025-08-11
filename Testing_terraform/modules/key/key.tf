@@ -1,0 +1,4 @@
+resource "aws_key_pair" "keypairnew_aws_sam" {
+  key_name   = "keypairnew_aws_sam"
+  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDSpWQ4Y+41/7tUrUOODFOTn7Txhnr2vVitFmJjm/X0uFOVzSBU09U2/UA2JO1aT97ob+lzHy1Hu+dW61/2TGJsuQEO+x7iRWqJlXenB51Ezn1i9TdSXhoyCqw5+2zwKDoJlxjgzFUoRbC5J1oCAWa0mCY4XHCJaVwckP90An+ffpviElC1zkvbtsz3RgJq7vfj60EPoydmVtg/M+pzTx351jn1IZpbcOt7YN1M6X1mvoLak1OF/dbi42bcRsHrB3sjnW3sFRcwiDQhED5OWJuU5giUsH69NnfH8MJa4l0OiEznBOHGZzoQ0o2XwhPZ0UEyMxtCiKI497PELWbkc6Ln"
+}

@@ -1,0 +1,144 @@
+# Step 1 - Provider Selection
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
+  }
+}
+
+# Configure the AWS Provider
+provider "aws" {
+  region = "ap-south-1"
+}
+
+# Step 2 - VPC Creation
+resource "aws_vpc" "Sam_auto_vpc" {
+  cidr_block = "10.0.0.0/16"
+  tags = {
+    Name = "VPC_Sam"
+  }
+}
+
+# Step 3 - Subnet Creation
+resource "aws_subnet" "sam_subnet_1" {
+  vpc_id            = aws_vpc.Sam_auto_vpc.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = "ap-south-1a"
+
+  tags = {
+    Name = "sub1"
+  }
+}
+
+output "subnet_id_debug" {
+  value = aws_subnet.sam_subnet_1.id
+}
+
+
+# Step 4 - Internet Gateway Creation
+resource "aws_internet_gateway" "sam-1-igw" {
+  vpc_id = aws_vpc.Sam_auto_vpc.id
+
+  tags = {
+    Name = "sigw"
+  }
+}
+
+# Step 5 - Route Table
+resource "aws_route_table" "sam_auto_rt" {
+  vpc_id = aws_vpc.Sam_auto_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.sam-1-igw.id
+  }
+
+  tags = {
+    Name = "rt1auto"
+  }
+}
+
+
+# Step 6 - Subnet Association
+resource "aws_route_table_association" "sam_auto_rt" {
+  subnet_id      = aws_subnet.sam_subnet_1.id
+  route_table_id = aws_route_table.sam_auto_rt.id
+}
+
+# Step 7 - Security Group
+resource "aws_security_group" "auto_sg_sam" {
+  name        = "web_sg"
+  description = "Allow HTTP, HTTPS, SSH inbound and all IPv4 outbound traffic"
+  vpc_id      = aws_vpc.Sam_auto_vpc.id
+
+  tags = {
+    Name = "web_sg"
+  }
+}
+
+# Inbound Rules
+resource "aws_vpc_security_group_ingress_rule" "ssh_ipv4" {
+  security_group_id = aws_security_group.auto_sg_sam.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 22
+  to_port           = 22
+  ip_protocol       = "tcp"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "http_ipv4" {
+  security_group_id = aws_security_group.auto_sg_sam.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "https_ipv4" {
+  security_group_id = aws_security_group.auto_sg_sam.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+}
+
+# Outbound Rule
+resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
+  security_group_id = aws_security_group.auto_sg_sam.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+}
+
+# Step 8 - Key Pair
+resource "aws_key_pair" "keypairnew-aws-sam" {
+  key_name   = "deploy-keypair"
+  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDC6qOc5NoxmLtZsY7Dint8S/gdppvGWkIbIKE96/8rAGUqMe2BQAH06M+GMPhg9vm9L/qt/Itg8Nmn32aHoKbf17MPKCQKWifH9yWUJF7iPdUSqaxnsKZ4tKqW4SMk1Nx4U/cSEO+9V5k9TLGnmQNv32E5nWDZu3q/73FoLS4++a+FdfjxavYysvSx1mhb4t4KPz1XgRJ3bj+KILNiyxX2q5T1jPeptP7ly2ypBdIwTA5ebAmkacbnqFWFBjTwxViLvDaSuI8pcewOFv5wXKAlZWoCyqITZilidto6q9qBk9yaelD4DZRzzIJwfw8bnw8M/b1KPWI3swNe3+zEpUMl"
+}
+
+# Step 9 - Latest Ubuntu AMI
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+}
+
+# Step 10 - EC2 Instances (3)
+resource "aws_instance" "web" {
+  count                       = 7 #change the size to reuse
+  ami                         = data.aws_ami.ubuntu.id
+  instance_type               = "t3.micro"
+  subnet_id                   = aws_subnet.sam_subnet_1.id
+  key_name                    = "deploy-keypair"
+  vpc_security_group_ids      = [aws_security_group.auto_sg_sam.id]
+  associate_public_ip_address = true
+
+  tags = {
+    Name = "sam--web-instance-${count.index + 1}"
+  }
+}
+ 
