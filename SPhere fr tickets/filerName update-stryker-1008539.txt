@@ -1,0 +1,12 @@
+UPDATE f
+SET f.filername = 
+    CASE 
+        WHEN f.filername LIKE '%strykercorp.com' THEN f.filername
+        
+        ELSE CONCAT(f.filername, '.', d.fqdn)
+    END
+FROM filer f
+INNER JOIN FilerSpecs fs ON fs.Filer_id = f.FilerID
+INNER JOIN adobjectinfo a ON a.Name = f.FilerName
+LEFT JOIN domain d ON d.domainID = a.domainID
+where d.domainid=2 --domain id-2= strykercorp.com
